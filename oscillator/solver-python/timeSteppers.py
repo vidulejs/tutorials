@@ -1,6 +1,5 @@
 from typing import Tuple, Callable
 import numpy as np
-import numbers
 import scipy as sp
 from scipy.integrate import OdeSolution
 from enum import Enum

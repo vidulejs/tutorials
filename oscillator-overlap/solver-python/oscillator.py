@@ -2,7 +2,6 @@ from __future__ import division
 
 import argparse
 import numpy as np
-from numpy.linalg import eig
 import precice
 from enum import Enum
 import csv
