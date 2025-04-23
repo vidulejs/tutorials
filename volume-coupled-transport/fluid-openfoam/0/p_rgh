@@ -29,6 +29,10 @@ boundaryField
     {
         type            zeroGradient;
     }
+    obstacle
+    {
+        type            zeroGradient;
+    }
     frontAndBottom
     {
         type            empty;

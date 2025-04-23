@@ -6,21 +6,23 @@ FoamFile
     object      U;
 }
 
-dimensions      [ 0 1 -1 0 0 0 0 ];
-
-internalField   uniform ( 0 0 0 );
+dimensions      [0 1 -1 0 0 0 0];
+internalField   uniform (10 0 0);
 
 boundaryField
 {
     inlet
     {
         type            fixedValue;
-        value           uniform (2 0 0); //$internalField;
-    	//type		zeroGradient;
+        value           $internalField;
     }
     outlet
     {
         type            zeroGradient;
+    }
+    obstacle
+    {
+        type            noSlip;
     }
     upperWall
     {
@@ -30,15 +32,7 @@ boundaryField
     {
         type            noSlip;
     }
-    obstacle
-    {
-        type            noSlip;
-    }
     frontAndBack
-    {
-        type            empty;
-    }
-    defaultFaces
     {
         type            empty;
     }
