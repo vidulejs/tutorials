@@ -7,7 +7,7 @@ nu = 0.0002  # Viscosity
 inlet_velocity = 2.0
 domain_length = 6.0
 domain_width = 2.0
-time_final = 3.0
+time_final = 10.0
 
 obstacle_x0 = 2.0
 obstacle_x1 = 3.0
@@ -18,8 +18,8 @@ obstacle_y1 = 1.0
 def pde(x, y):
     """
     2D Burgers equation:
-    du/dt + u*du/dx + v*du/dy = nu*(d²u/dx² + d²u/dy²)
-    dv/dt + u*dv/dx + v*dv/dy = nu*(d²v/dx² + d²v/dy²)
+    du/dt + u*du/dx + v*du/dy = nu*(d^2u/dx^2 + d^2u/dy^2)
+    dv/dt + u*dv/dx + v*dv/dy = nu*(d^2v/dx^2 + d^2v/dy^2)
     
     where u and v are the velocity components in x and y directions.
     
@@ -105,13 +105,13 @@ if __name__ == "__main__":
     model = dde.Model(data, net)
 
     # Weights for boundary conditions
-    # loss_weights = [1, 1, 2, 2, 0.5]  # Weights for [PDE_u, PDE_v, bc_inlet, bc_walls, ic]
+    loss_weights = [1, 1, 2, 2, 2, 2, 5] # [eq_u, eq_v, inlet_x, inlet_y, walls_x, walls_y, ic]
 
     # Compile the model
-    model.compile("adam", lr=1e-3)
+    model.compile("adam", lr=1e-3, loss_weights=loss_weights)
 
     # Train the model
-    losshistory, train_state = model.train(iterations=5000)
+    losshistory, train_state = model.train(iterations=20000)
 
     # Save the model
     model.save("burgers2d_model")
