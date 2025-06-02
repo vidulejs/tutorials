@@ -14,9 +14,7 @@ boundaryField
 {
     inlet
     {
-        type            fixedValue;
-        value           uniform (2 0 0); //$internalField;
-    	//type		zeroGradient;
+        type            zeroGradient;
     }
     outlet
     {

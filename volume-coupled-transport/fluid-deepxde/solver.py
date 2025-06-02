@@ -11,82 +11,98 @@ def main():
     solver_process_size = 1
     
     # pde setup
-    from pde import geom, timedomain, net, data
+    from pde import geom, timedomain, net, data, domain_length, domain_width
     
     # Load  trained model
     model = dde.Model(data, net)
     model.compile("adam", lr=1e-3)
     
-    model_path = "burgers2d_model-20000.pt"
+    model_path = "navier_stokes_channel_obstacle_model-600.pt"
     if not os.path.exists(model_path):
         print(f"Error: Model file {model_path} not found!")
         sys.exit(1)
-        
     model.restore(save_path=model_path, verbose=1)
-    
-    def create_velocity_field(x, y, t=0.0):
-        """Generate velocity field using the deepXDE model"""
-        n_points = len(x.flatten())
-        t_values = np.ones(n_points) * t
-        
-        points = np.vstack((x.flatten(), y.flatten(), t_values)).T
-        
-        velocities = model.predict(points)
-        u = velocities[:, 0].reshape(x.shape)
-        v = velocities[:, 1].reshape(y.shape)
-        
-        return u, v
 
-    x_min, x_max = 0.0, 6.0
-    y_min, y_max = 0.0, 2.0
-    nx, ny = 60, 20
+    def create_velocity_field(x_mesh, y_mesh, current_time=0.0):
+        n_points_mesh = len(x_mesh.flatten())
+        t_values_mesh = np.full(n_points_mesh, current_time)
+        
+        # Input to model: (x, y, t)
+        points_to_predict = np.vstack((x_mesh.flatten(), y_mesh.flatten(), t_values_mesh)).T
+        
+        # Model predicts (u, v, p)
+        predictions = model.predict(points_to_predict)
+        
+        # We only need u and v
+        u_pred = predictions[:, 0].reshape(x_mesh.shape)
+        v_pred = predictions[:, 1].reshape(x_mesh.shape) # Use x_mesh.shape for both
+        
+        return u_pred, v_pred
+
+    # Mesh for preCICE coupling (can be different from DeepXDE's internal points)
+    # Using the domain_length from the NS model
+    x_min_precice, x_max_precice = 0.0, domain_length
+    y_min_precice, y_max_precice = 0.0, domain_width
+    nx_precice, ny_precice = 60, 20 # Or match your preCICE setup
+
+    x_centers_precice = np.linspace(x_min_precice + (x_max_precice - x_min_precice)/(2*nx_precice), x_max_precice - (x_max_precice - x_min_precice)/(2*nx_precice), nx_precice)
+    y_centers_precice = np.linspace(y_min_precice + (y_max_precice - y_min_precice)/(2*ny_precice), y_max_precice - (y_max_precice - y_min_precice)/(2*ny_precice), ny_precice)
     
-    x_centers = np.linspace(x_min + (x_max - x_min)/(2*nx), x_max - (x_max - x_min)/(2*nx), nx)
-    y_centers = np.linspace(y_min + (y_max - y_min)/(2*ny), y_max - (y_max - y_min)/(2*ny), ny)
+    X_precice, Y_precice = np.meshgrid(x_centers_precice, y_centers_precice)
+    coordinates_precice = np.vstack([X_precice.flatten(), Y_precice.flatten()]).T
     
-    X, Y = np.meshgrid(x_centers, y_centers)
+    # Initialize velocity field at t=0 for preCICE
+    U_init, V_init = create_velocity_field(X_precice, Y_precice, current_time=0.0)
+    velocities_to_write = np.column_stack([U_init.flatten(), V_init.flatten()])
     
-    coordinates = np.vstack([X.flatten(), Y.flatten()]).T
-    
-    # Initialize velocity field
-    U, V = create_velocity_field(X, Y, t=0.0)
-    velocities = np.column_stack([U.flatten(), V.flatten()])
-    
-    n_vertices = coordinates.shape[0]
-    
-    participant_name = "Fluid"
-    mesh_name = "Fluid-Mesh"
+    participant_name = "Fluid" # Should match your precice-config.xml
+    mesh_name = "Fluid-Mesh"   # Should match your precice-config.xml
     participant = precice.Participant(participant_name, precice_config, solver_process_index, solver_process_size)
     
-    vertex_ids = participant.set_mesh_vertices(mesh_name, coordinates)
+    vertex_ids_precice = participant.set_mesh_vertices(mesh_name, coordinates_precice)
     
-    dt = participant.initialize()
-    time = 0
+    dt_precice = participant.initialize() # dt_precice is the first coupling time step
+    dt_precice = 0.005
+    current_sim_time = 0.0
     
+    # Checkpoint variables
+    velocities_checkpoint = None
+    time_checkpoint = None
+
     while participant.is_coupling_ongoing():
-        dt = participant.get_max_time_step_size()
-        
-        print(f"Advancing time {time + dt:.5f}...")
-        
         if participant.requires_writing_checkpoint():
-            velocities_checkpoint = velocities.copy()
-            time_checkpoint = time
+            print(f"Writing checkpoint at t={current_sim_time:.5f}")
+            velocities_checkpoint = velocities_to_write.copy()
+            time_checkpoint = current_sim_time
         
-        U, V = create_velocity_field(X, Y, t=time+dt)
-        velocities = np.column_stack([U.flatten(), V.flatten()])
+        # dt_precice is the coupling window size suggested by preCICE
+        # The PINN model can predict at any t, so we advance by dt_precice.
+        target_time = current_sim_time + dt_precice
+        print(f"Advancing PINN from t={current_sim_time:.5f} to t={target_time:.5f} (dt={dt_precice:.5f})")
         
-        participant.write_data(mesh_name, "Velocity", vertex_ids, velocities)
+        U_new, V_new = create_velocity_field(X_precice, Y_precice, current_time=target_time)
+        velocities_to_write = np.column_stack([U_new.flatten(), V_new.flatten()])
         
-        participant.advance(dt)
+        # Assuming "Velocity" is the data name in precice-config.xml for vector data
+        participant.write_data(mesh_name, "Velocity", vertex_ids_precice, velocities_to_write)
         
-        time += dt
+        participant.advance(dt_precice) # Advance preCICE by the coupling window
+        current_sim_time = target_time # Update simulation time
         
         if participant.requires_reading_checkpoint():
-            velocities = velocities_checkpoint.copy()
-            time = time_checkpoint
+            print(f"Reading checkpoint, restoring to t={time_checkpoint:.5f}")
+            velocities_to_write = velocities_checkpoint.copy()
+            current_sim_time = time_checkpoint
+            # Need to re-write the checkpointed data if the advance was reverted
+            participant.write_data(mesh_name, "Velocity", vertex_ids_precice, velocities_to_write)
+
+
+        # Get the next suggested coupling time step size for the *next* iteration
+        if participant.is_coupling_ongoing(): # Check again before getting max time step
+             dt_precice = participant.get_max_time_step_size()
         
     participant.finalize()
-    print("Finished.")
+    print("preCICE coupling finished.")
 
 if __name__ == "__main__":
     main()

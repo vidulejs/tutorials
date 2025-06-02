@@ -1,21 +1,17 @@
 import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 # --- 1. Parameters ---
-# Fluid properties
-nu = 0.0002  # Kinematic viscosity (m^2/s)
-# rho = 1.0 # Density (kg/m^3)
+nu = 0.0002
+inlet_kinematic_pressure = 1.0
+outlet_kinematic_pressure = 0.0
 
-# Inlet velocity
-inlet_u_velocity = 2.0  # m/s
+domain_length = 6.0
+domain_width = 2.0
+time_final = 10.0
 
-# Domain dimensions
-domain_length = 10.0  # m
-domain_width = 2.0   # m
-time_final = 5.0     # s
-
-# Rectangular obstacle dimensions and position
 obstacle_x0 = 2.0
 obstacle_x1 = 3.0
 obstacle_y0 = 0.0
@@ -66,115 +62,73 @@ def navier_stokes_pde(x_coords, y_solution):
     return [continuity_eq, x_momentum_eq, y_momentum_eq]
 
 # --- 3. Define the Domain ---
-# Spatio-temporal domain
-geom_channel = dde.geometry.Rectangle([0, 0], [domain_length, domain_width])
+
+geom_channel = dde.geometry.Rectangle([0, 0], [domain_length, domain_width]) # domain_length is now 6.0
 geom_obstacle = dde.geometry.Rectangle([obstacle_x0, obstacle_y0], [obstacle_x1, obstacle_y1])
 geom_spatial = dde.geometry.CSGDifference(geom_channel, geom_obstacle)
-
 timedomain = dde.geometry.TimeDomain(0, time_final)
-geomtime = dde.geometry.GeometryXTime(geom_spatial, timedomain)
+# Spatio-temporal domain
+geom = dde.geometry.GeometryXTime(geom_spatial, timedomain)
 
 # --- 4. Define Initial and Boundary Conditions ---
 
-# Initial conditions: u=0, v=0, p=0 (kinematic pressure) at t=0
 def initial_condition_zeros(x_coords_t):
     return np.zeros((x_coords_t.shape[0], 1))
+ic_u = dde.icbc.IC(geom, initial_condition_zeros, lambda _, on_initial: on_initial, component=0)
+ic_v = dde.icbc.IC(geom, initial_condition_zeros, lambda _, on_initial: on_initial, component=1)
+ic_p = dde.icbc.IC(geom, initial_condition_zeros, lambda _, on_initial: on_initial, component=2)
 
-ic_u = dde.icbc.IC(geomtime, initial_condition_zeros, lambda _, on_initial: on_initial, component=0)
-ic_v = dde.icbc.IC(geomtime, initial_condition_zeros, lambda _, on_initial: on_initial, component=1)
-ic_p = dde.icbc.IC(geomtime, initial_condition_zeros, lambda _, on_initial: on_initial, component=2) # Kinematic pressure initial ref 0
-
-# Boundary condition predicates
 def boundary_inlet(x_coords_t, on_boundary):
     return on_boundary and np.isclose(x_coords_t[0], 0)
-
 def boundary_outlet(x_coords_t, on_boundary):
-    return on_boundary and np.isclose(x_coords_t[0], domain_length)
-
-def boundary_solid_walls(x_coords_t, on_boundary): # Covers channel top/bottom and obstacle
+    return on_boundary and np.isclose(x_coords_t[0], domain_length) # domain_length is now 6.0
+def boundary_solid_walls(x_coords_t, on_boundary):
     is_on_inlet = np.isclose(x_coords_t[0], 0)
-    is_on_outlet = np.isclose(x_coords_t[0], domain_length)
+    is_on_outlet = np.isclose(x_coords_t[0], domain_length) # domain_length is now 6.0
     return on_boundary and (not is_on_inlet) and (not is_on_outlet)
 
-# Inlet BCs
-bc_inlet_u = dde.icbc.DirichletBC(
-    geomtime,
-    lambda x: inlet_u_velocity * np.ones((x.shape[0], 1)),
-    boundary_inlet,
-    component=0
+bc_inlet_p_dirichlet = dde.icbc.DirichletBC(
+    geom, lambda x: inlet_kinematic_pressure * np.ones((x.shape[0], 1)), boundary_inlet, component=2
 )
-bc_inlet_v = dde.icbc.DirichletBC(
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_inlet,
-    component=1
+bc_inlet_u_neumann = dde.icbc.NeumannBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_inlet, component=0
 )
-bc_inlet_p_neumann = dde.icbc.NeumannBC( # p: zeroGradient
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_inlet,
-    component=2
+bc_inlet_v_neumann = dde.icbc.NeumannBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_inlet, component=1
 )
-
-# Outlet BCs
-bc_outlet_p_dirichlet = dde.icbc.DirichletBC( # p: fixedValue (kinematic reference 0)
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_outlet,
-    component=2
+bc_outlet_p_dirichlet_new = dde.icbc.DirichletBC(
+    geom, lambda x: outlet_kinematic_pressure * np.ones((x.shape[0], 1)), boundary_outlet, component=2
 )
-bc_outlet_u_neumann = dde.icbc.NeumannBC( # u: zeroGradient
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_outlet,
-    component=0
+bc_outlet_u_neumann = dde.icbc.NeumannBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_outlet, component=0
 )
-bc_outlet_v_neumann = dde.icbc.NeumannBC( # v: zeroGradient
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_outlet,
-    component=1
+bc_outlet_v_neumann = dde.icbc.NeumannBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_outlet, component=1
 )
-
-# Solid Walls (Channel top/bottom, Obstacle) BCs
-bc_walls_u_noslip = dde.icbc.DirichletBC( # u: noSlip
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_solid_walls,
-    component=0
+bc_walls_u_noslip = dde.icbc.DirichletBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_solid_walls, component=0
 )
-bc_walls_v_noslip = dde.icbc.DirichletBC( # v: noSlip
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_solid_walls,
-    component=1
+bc_walls_v_noslip = dde.icbc.DirichletBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_solid_walls, component=1
 )
-bc_walls_p_neumann = dde.icbc.NeumannBC( # p: zeroGradient
-    geomtime,
-    lambda x: np.zeros((x.shape[0], 1)),
-    boundary_solid_walls,
-    component=2
+bc_walls_p_neumann = dde.icbc.NeumannBC(
+    geom, lambda x: np.zeros((x.shape[0], 1)), boundary_solid_walls, component=2
 )
-
-# Consolidate BCs and ICs
-# Order matters for loss_weights later
-bcs_and_ics = [
-    ic_u, ic_v, ic_p,                       # Initial conditions
-    bc_inlet_u, bc_inlet_v, bc_inlet_p_neumann, # Inlet
-    bc_outlet_u_neumann, bc_outlet_v_neumann, bc_outlet_p_dirichlet, # Outlet
-    bc_walls_u_noslip, bc_walls_v_noslip, bc_walls_p_neumann # Solid walls
+bcs_and_ics_pressure_driven = [
+    ic_u, ic_v, ic_p,
+    bc_inlet_p_dirichlet, bc_inlet_u_neumann, bc_inlet_v_neumann,
+    bc_outlet_p_dirichlet_new, bc_outlet_u_neumann, bc_outlet_v_neumann,
+    bc_walls_u_noslip, bc_walls_v_noslip, bc_walls_p_neumann
 ]
 
-# --- 5. Create the PDE Problem ---
+# --- 5. Create the PDE Problem with NEW BCs and UPDATED GEOMETRY ---
 data = dde.data.TimePDE(
-    geomtime,
+    geom, # This now uses the updated domain_length
     navier_stokes_pde,
-    bcs_and_ics,
-    num_domain=20000,    # Collocation points for PDE residual in the domain
-    num_boundary=4000,   # Points for boundary conditions
-    num_initial=4000,    # Points for initial conditions
-    # solution=None,     # No analytical solution provided for training
-    # num_test=5000      # Optional: for evaluating PDE residuals on a test set during/after training
+    bcs_and_ics_pressure_driven,
+    num_domain=20000, # You might want to adjust these based on the new domain sizeR
+    num_boundary=5000,
+    num_initial=4000,
 )
 
 # --- 6. Neural Network Architecture ---
@@ -190,43 +144,48 @@ if __name__ == "__main__":
     # Create the model
     model = dde.Model(data, net)
 
-    # Loss weights: [PDE_cont, PDE_xm, PDE_ym, BC_iu, BC_iv, BC_op, BC_nsu, BC_nsv, IC_u, IC_v, IC_p]
-    # Order corresponds to definition in navier_stokes_pde and bcs_and_ics list
+    # Loss weights:
+    # PDE: [cont, x-mom, y-mom]
+    # ICs: [ic_u, ic_v, ic_p]
+    # Inlet: [bc_iu, bc_iv, bc_ip_N]
+    # Outlet: [bc_ou_N, bc_ov_N, bc_op_D]
+    # Walls: [bc_wu_D, bc_wv_D, bc_wp_N]
+    # Total = 3 (PDEs) + 3 (ICs) + 3 (Inlet) + 3 (Outlet) + 3 (Walls) = 15 loss terms
     loss_weights = [
-        2, 1, 1,          # PDE residuals (continuity, x-mom, y-mom)
-        100, 100,          # Inlet u, v
-        100,               # Outlet p
-        100, 100,          # No-slip u, v
-        100, 100, 100     # IC u, v, p
+        10, 5, 5,              # PDE residuals
+        10, 10, 100,           # ICs u, v, p
+        10, 10, 100,          # Inlet u(D), v(D), p(N)
+        10, 10, 100,          # Outlet u(N), v(N), p(D)
+        10, 10, 100           # Walls u(D), v(D), p(N)
     ]
-    # Compile the model
-    model.compile("adam", lr=1e-3, loss_weights=loss_weights)
 
-    # # Train the model
-    # # For a real run, iterations should be much higher (e.g., 50000-200000+)
-    # # and consider a learning rate scheduler.
-    # losshistory, train_state = model.train(iterations=20000, display_every=1000) # Initial coarse training
+    previous_model_checkpoint_path = "navier_stokes_channel_obstacle_model-10000.pt"
 
-    # Refine with a smaller learning rate
-    model.compile("adam", lr=1e-4, loss_weights=loss_weights)
-    losshistory_2, train_state_2 = model.train(iterations=10000, display_every=200)
-    
-    # Combine loss histories for plotting
-    # This part needs careful handling if you want to combine them properly
-    # For simplicity, we'll just plot the last one or save both separately.
-    # To properly combine:
-    # losshistory.loss_train = np.vstack((losshistory.loss_train, losshistory_2.loss_train))
-    # losshistory.loss_test = np.vstack((losshistory.loss_test, losshistory_2.loss_test)) # if num_test is used
-    # losshistory.metrics_test = np.vstack((losshistory.metrics_test, losshistory_2.metrics_test)) # if num_test is used
-    # train_state.best_step = train_state_2.best_step # or sum iterations
-    # train_state.best_loss_train = train_state_2.best_loss_train
-    # etc.
+    if not os.path.exists(previous_model_checkpoint_path):
+        print(f"Error: Previous model checkpoint {previous_model_checkpoint_path} not found!")
+        print("Please ensure the base model was trained on the correct (old) geometry or correct the path.")
+        print("If the old model was for a different domain size, fine-tuning might be challenging.")
+        exit()
+        print("Proceeding without loading pre-trained weights (training from scratch).")
+        model_loaded = False
+    else:
+        print(f"Loading weights from: {previous_model_checkpoint_path}")
+        try:
+            model.restore(previous_model_checkpoint_path, verbose=1)
+            print("Model weights restored.")
+            model_loaded = True
+        except Exception as e:
+            print(f"Could not restore model: {e}")
+            print("Proceeding without loading pre-trained weights (training from scratch).")
+            model_loaded = False
 
-    # Save the model (optional)
+    model.compile("adam", lr=1e-5, loss_weights=loss_weights)
+    losshistory_2, train_state_2 = model.train(iterations=600, display_every=200)
+
+    # Save the model
     model.save("navier_stokes_channel_obstacle_model")
 
     # Plot loss history
-    # dde.saveplot(losshistory, train_state, issave=True, isplot=True, output_dir="NS_forward_results_1")
     dde.saveplot(losshistory_2, train_state_2, issave=True, isplot=True, output_dir="NS_forward_results")
 
     print("Training finished. Model and plots saved in 'NS_forward_results' directory.")
