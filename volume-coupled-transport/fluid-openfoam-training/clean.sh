@@ -1,0 +1,1 @@
+../fluid-openfoam/clean.sh
