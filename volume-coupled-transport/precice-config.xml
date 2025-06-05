@@ -38,7 +38,7 @@
     <read-data name="Pressure" mesh="Transport-Mesh" />
   </participant>
 
-  <m2n:sockets acceptor="Transport" connector="Fluid" exchange-directory="." />
+  <m2n:sockets acceptor="Transport" connector="Fluid" exchange-directory=".." />
 
   <coupling-scheme:serial-explicit>
     <time-window-size value="0.005" />
