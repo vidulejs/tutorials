@@ -32,10 +32,6 @@ interfaces
       {
         solver_name U;
       };
-      Pressure
-      {
-        solver_name p;
-      };
     };
   };
 };

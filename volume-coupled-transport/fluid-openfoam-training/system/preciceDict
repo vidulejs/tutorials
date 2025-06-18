@@ -7,7 +7,7 @@ FoamFile
     object      preciceDict;
 }
 
-preciceConfig "../precice-config-training.xml";
+preciceConfig "../precice-config.xml";
 
 participant Fluid;
 
@@ -38,4 +38,28 @@ interfaces
       };
     };
   };
+
+  Interface2
+  {
+    mesh              Feedback-Mesh;
+    patches           ();
+    cellSets          ();
+    locations         volumeCenters;
+    
+    readData
+    {
+      Velocity
+      {
+        solver_name U;
+      };
+      Pressure
+      {
+        solver_name p;
+      };
+    };
+
+    writeData
+    {
+    };
+  }
 };

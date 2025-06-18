@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import precice
@@ -12,16 +12,16 @@ import numpy as np
 from pde_geom import *
 from net import *
 
-precice_config = '../precice-config-training.xml'
+precice_config = '../precice-config.xml'
 solver_process_index = 0
 solver_process_size = 1
 
-participant_name = "Neural"
-mesh_name = "Neural-Mesh"
+participant_name = "Feedback"
+mesh_name = "Feedback-Mesh"
 participant = precice.Participant(participant_name, precice_config, solver_process_index, solver_process_size)
 
 
-# In[2]:
+# In[4]:
 
 
 data = define_pde(geom, navier_stokes_pde, loss_terms)
@@ -42,7 +42,7 @@ model.compile(
 # model.restore(save_path=model_path, verbose=1)
 
 
-# In[3]:
+# In[5]:
 
 
 def model_predict(x_mesh, y_mesh, time=0.0):
@@ -87,7 +87,7 @@ dt_precice = participant.initialize()
 time = 0.0
 
 
-# In[ ]:
+# In[5]:
 
 
 # while participant.is_coupling_ongoing():
@@ -112,6 +112,24 @@ time = 0.0
 # In[ ]:
 
 
+# # --- INITIALIZATION ---
+# # receive the mesh from OpenFOAM.
+# dt_precice = participant.initialize()
+# time = 0.0
+
+# # --- GET MESH INFO AFTER INITIALIZATION ---
+# vertex_ids_precice, vertex_coords = participant.get_mesh_vertex_ids_and_coordinates(mesh_name)
+# print(f"Received mesh '{mesh_name}' with {len(vertex_ids_precice)} vertices.")
+
+# # Initialize buffers to hold the data we will read from preCICE.
+# num_vertices = len(vertex_ids_precice)
+# Velocity = np.zeros((num_vertices, 2)) # For (u, v)
+# Pressure = np.zeros(num_vertices)
+
+
+# In[ ]:
+
+
 V_dataset = []
 P_dataset = []
 T_dataset = []
@@ -125,10 +143,10 @@ while participant.is_coupling_ongoing():
     time += dt_precice
         
     Velocity_ground_truth = participant.read_data(mesh_name, "Velocity", vertex_ids_precice, Velocity)
-    Pressure_ground_truth = participant.read_data(mesh_name, "Pressure", vertex_ids_precice, Pressure)
+    # Pressure_ground_truth = participant.read_data(mesh_name, "Pressure", vertex_ids_precice, Pressure)
 
-    V_dataset.append(Velocity_ground_truth)
-    P_dataset.append(Pressure_ground_truth)
+    V_dataset.append(np.copy(Velocity_ground_truth))
+    # P_dataset.append(np.copy(Pressure_ground_truth))
     T_dataset.append(time)
 
     participant.advance(dt_precice)
@@ -143,4 +161,10 @@ print("preCICE coupling finished.")
 
 
 get_ipython().system("jupyter nbconvert --to script 'training-participant.ipynb'")
+
+
+# In[ ]:
+
+
+
 

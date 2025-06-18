@@ -110,3 +110,4 @@ runs/
 .project
 .settings/
 *.swp
+volume-coupled-transport/fluid-deepxde/velocity_magnitude_animation.mp4
