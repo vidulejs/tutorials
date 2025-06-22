@@ -109,16 +109,16 @@ bc_walls_p_neumann = dde.icbc.NeumannBC(
     geom, lambda x: np.zeros((x.shape[0], 1)), boundary_solid_walls, component=2
 )
 
-loss_terms = [
+unsupervised_loss_terms = [
     ic_p, ic_u, ic_v,
     bc_inlet_p_dirichlet, bc_inlet_u_neumann, bc_inlet_v_neumann,
     bc_outlet_p_dirichlet, bc_outlet_u_neumann, bc_outlet_v_neumann,
     bc_walls_p_neumann, bc_walls_u_noslip, bc_walls_v_noslip
 ]
 
-loss_weights = [
+unsupervised_loss_weights = [
     10, 5, 5,      # PDE residuals: continuity, x-momentum, y-momentum
-    10, 10, 10,   # ICs: p, u, v
+    10, 10, 10,    # ICs: p, u, v
     100, 10, 10,   # Inlet BCs: p(D), u(N), v(N)
     100, 10, 10,   # Outlet BCs: p(D), u(N), v(N)
     100, 10, 10    # Wall BCs: p(N), u(D), v(D)

@@ -8,29 +8,29 @@
   </log>
 
   <data:vector name="Velocity" />
-  <!-- <data:scalar name="Pressure" /> -->
+  <data:scalar name="Pressure" />
 
   <mesh name="Fluid-Mesh" dimensions="2">
     <use-data name="Velocity" />
-    <!-- <use-data name="Pressure" /> -->
+    <use-data name="Pressure" />
   </mesh>
 
   <mesh name="Feedback-Mesh" dimensions="2">
     <use-data name="Velocity" />
-    <!-- <use-data name="Pressure" /> -->
+    <use-data name="Pressure" />
   </mesh>
 
   <participant name="Fluid">
     <provide-mesh name="Fluid-Mesh" />
     <write-data name="Velocity" mesh="Fluid-Mesh" />
-    <!-- <write-data name="Pressure" mesh="Fluid-Mesh" /> -->
+    <write-data name="Pressure" mesh="Fluid-Mesh" />
   </participant>
 
   <participant name="Feedback">
     <provide-mesh name="Feedback-Mesh"/>
     <receive-mesh name="Fluid-Mesh" from="Fluid"/>
     <read-data name="Velocity" mesh="Feedback-Mesh" />
-    <!-- <read-data name="Pressure" mesh="Fluid-Mesh" /> -->
+    <read-data name="Pressure" mesh="Feedback-Mesh" />
 
     <mapping:nearest-neighbor 
       direction="read" 
@@ -47,6 +47,6 @@
     <participants first="Fluid" second="Feedback" />
     
     <exchange data="Velocity" mesh="Fluid-Mesh" from="Fluid" to="Feedback" />
-    <!-- <exchange data="Pressure" mesh="Fluid-Mesh" from="Fluid" to="Feedback" /> -->
+    <exchange data="Pressure" mesh="Fluid-Mesh" from="Fluid" to="Feedback" />
   </coupling-scheme:serial-explicit>
 </precice-configuration>
