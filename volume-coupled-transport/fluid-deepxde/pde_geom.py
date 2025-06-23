@@ -117,9 +117,9 @@ unsupervised_loss_terms = [
 ]
 
 unsupervised_loss_weights = [
-    10, 5, 5,      # PDE residuals: continuity, x-momentum, y-momentum
-    10, 10, 10,    # ICs: p, u, v
-    100, 10, 10,   # Inlet BCs: p(D), u(N), v(N)
-    100, 10, 10,   # Outlet BCs: p(D), u(N), v(N)
-    100, 10, 10    # Wall BCs: p(N), u(D), v(D)
+    100, 50, 50,      # PDE residuals: continuity, x-momentum, y-momentum
+    1, 1, 1,    # ICs: p, u, v
+    10, 10, 10,   # Inlet BCs: p(D), u(N), v(N)
+    10, 10, 10,   # Outlet BCs: p(D), u(N), v(N)
+    10, 10, 10    # Wall BCs: p(N), u(D), v(D)
 ]
