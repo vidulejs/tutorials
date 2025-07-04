@@ -2,7 +2,6 @@ import deepxde as dde
 import torch
 import torch.nn as nn
 
-# Define the dimensions of the neural network
 # [input_dim] + [hidden_dim] * num_hidden_layers + [output_dim]
 input_dim = 3   # (x, y, t)
 output_dim = 3  # (u, v, p)
