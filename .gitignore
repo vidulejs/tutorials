@@ -112,3 +112,10 @@ runs/
 *.swp
 
 *.mp4
+volume-coupled-transport/unet/models/*.pt
+volume-coupled-transport/unet/models/2DCFD_Unet.tar
+volume-coupled-transport/unet/finetuned_model/*epoch_*.pt
+volume-coupled-transport/unet/outputs/*.png
+volume-coupled-transport/unet/outputs/*.txt
+volume-coupled-transport/unet/*.npz
+volume-coupled-transport/unet/training_data_gridded.npz
