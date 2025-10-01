@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e -u
 
+touch probedLocations.dat
+rm probedLocations.dat
+
 . ../../tools/log.sh
 exec > >(tee --append "$LOGFILE") 2>&1
 
