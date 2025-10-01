@@ -35,7 +35,10 @@ timeFormat      general;
 
 timePrecision   6;
 
-libs ("libpreciceAdapterFunctionObject.so" "libsolidDisplacementFoamForce.so");
+libs
+(
+    "libsolidDisplacementFoamForce.so" "libpreciceAdapterFunctionObject.so"
+);
 
 functions
 {
