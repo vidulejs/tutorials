@@ -9,8 +9,8 @@
 
   <profiling mode="fundamental" synchronize="false" />
 
-  <data:vector name="Force" waveform-degree="1"/>
-  <data:vector name="Displacement" waveform-degree="1"/>
+  <data:vector name="Force" waveform-degree="0"/>
+  <data:vector name="Displacement" waveform-degree="0"/>
 
   <mesh name="Fluid-Mesh" dimensions="2">
     <use-data name="Force" />
@@ -48,8 +48,8 @@
     <time-window-size value="0.01" />
     <max-time value="5" />
     <participants first="Fluid" second="Solid" />
-    <exchange data="Force" mesh="Solid-Mesh" from="Fluid" to="Solid" substeps="true"/>
-    <exchange data="Displacement" mesh="Solid-Mesh" from="Solid" to="Fluid" substeps="true"/>
+    <exchange data="Force" mesh="Solid-Mesh" from="Fluid" to="Solid" substeps="false"/>
+    <exchange data="Displacement" mesh="Solid-Mesh" from="Solid" to="Fluid" substeps="false"/>
     <max-iterations value="50" />
     <relative-convergence-measure limit="5e-3" data="Displacement" mesh="Solid-Mesh" />
     <relative-convergence-measure limit="5e-3" data="Force" mesh="Solid-Mesh" />
