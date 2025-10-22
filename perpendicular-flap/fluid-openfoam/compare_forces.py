@@ -92,7 +92,6 @@ def plot_force_comparison(case_data):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.ylim(12.5, 16.5)
 
     output_filename = 'force_comparison.png'
     plt.savefig(output_filename)
@@ -101,12 +100,15 @@ def plot_force_comparison(case_data):
 
 if __name__ == "__main__":
     case_folders = [
-        "reference-dt-0.01", "dt-0.005", "dt-0.02",
-        "dt-0.02-subcycling-dt-0.01", "dt-0.01-subcycling-dt-0.005",
-        "dt-0.01-subcycling-dt-0.00334", "dt-0.005-subcycling-dt-0.0025",
+        "reference-dt-0.01", #"dt-0.005", 
+        #"dt-0.001", "dt-0.02",
+        # "dt-0.02-subcycling-dt-0.01", "dt-0.01-subcycling-dt-0.005",
+        # "dt-0.01-subcycling-dt-0.00334", "dt-0.005-subcycling-dt-0.0025",
         "dt-0.01-subcycling-dt-0.001-waveform-0",
-        "dt-0.005-subcycling-dt-0.0025-waveform-0",
-        "dt-0.01-subcycling-dt-0.005-waveform-0"
+        # "dt-0.005-subcycling-dt-0.0025-waveform-0",
+        # "dt-0.01-subcycling-dt-0.005-waveform-0",
+        "dt-0.01-subcycling-dt-0.001-waveform-1",
+        "dt-0.01-subcycling-dt-0.001-waveform-2",
     ]
     case_data = {}
 
